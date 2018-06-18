@@ -6,6 +6,8 @@ from approximator import QApproximator
 from copy_weights import WeightCopier
 import numpy as np
 import random
+from gym.wrappers import Monitor
+import os
 
 class DQN:
 
@@ -17,24 +19,34 @@ class DQN:
 		self.Q_ =  QApproximator(self.nA,"Q_")
 
 		self.counter = 0
+		self.episode = 0
 		self.epsilons = np.linspace(1.0, 0.1, 500000)
 
 		self.runid = np.random.randint(10000)
 
-		self.max_replay = 500000
+		self.max_replay = 1000000
 			
 		self.copier = WeightCopier(self.Q,self.Q_)
 
+		self.D = []
+
 	def train(self,num_episodes=500000,discount=0.99,restore=True):
 
-		saver = tf.train.Saver()
+		saver = tf.train.Saver(max_to_keep=5,keep_checkpoint_every_n_hours=1)
 
-		with tf.Session(config=tf.ConfigProto(allow_soft_placement=True,log_device_placement=False)) as sess:
+		config = tf.ConfigProto(allow_soft_placement=True,log_device_placement=False)
+		config.gpu_options.allow_growth = True
+
+		with tf.Session(config=config) as sess:
 			
 			filewriter = tf.summary.FileWriter(logdir="logs/" + str(self.runid), graph=sess.graph)
 			merge = tf.summary.merge_all()
 
 			processor = Preprocessor()
+
+			monitor_path = "./monitor"
+			if not os.path.exists(monitor_path):
+				os.makedirs(monitor_path)
 
 
 			if restore:
@@ -42,7 +54,6 @@ class DQN:
 			else:
 				sess.run(tf.global_variables_initializer())
 
-			D = []
 
 			# Initialize replay memory
 			state = self.env.reset()
@@ -57,13 +68,16 @@ class DQN:
 				next_state = processor.process(sess,next_state)
 				next_state = np.append(state[:,:,1:],next_state[...,None],axis=2)
 				transition_tuple = (state,action,reward,next_state,done)
-				D.append(transition_tuple)
+				self.D.append(transition_tuple)
 				state = next_state
 
 			episode_reward = 0
 			avg_reward = 0
 			beta = 0.01
+			e=1.0
 			
+			#self.env = Monitor(self.env,directory=monitor_path, video_callable=lambda count: count % 500 == 0, resume=True)
+
 			while True:
 			
 				state = self.env.reset()
@@ -75,12 +89,13 @@ class DQN:
 				reward_summary = tf.Summary(value=[tf.Summary.Value(tag='Reward',simple_value=episode_reward)])
 				filewriter.add_summary(reward_summary,self.counter)
 
-				episode_reward = 0
+				print("Iteration: " + str(self.counter) + " Episode: " + str(self.episode) + " Epsilon: " + str(e) + " Episode Reward: " + str(episode_reward) + " Replay Size: " + str(len(self.D)), end="\r", flush=True)
 
+				episode_reward = 0
+				self.episode += 1
 				
 				while True:
 
-					self.env.render()
 					self.counter += 1
 					e = self.epsilons[min(len(self.epsilons)-1,self.counter)]
 
@@ -93,20 +108,16 @@ class DQN:
 
 					transition_tuple = (state,action,reward,next_state,done)
 
-					D.append(transition_tuple)
+					self.D.append(transition_tuple)
 
 					episode_reward += reward
-					avg_reward =  (1-beta) * episode_reward + beta * reward
 
-					print("Iteration: " + str(self.counter) + " Epsilon: " + str(e) + " Avg Reward: " + str(round(avg_reward,4)), end="\r", flush=True)
-
-
-					if len(D) > self.max_replay:
-						del D[0]
+					if len(self.D) > self.max_replay:
+						del self.D[0]
 					if self.counter%10000 == 0:
 						self.copier.copy(sess)
 						# Save model
-						print("Periodically saving model...")
+						print("Copying weights and saving model...")
 						save_path = saver.save(sess, "./saves/model.ckpt")
 
 					if self.counter % 20 == 0:
@@ -115,18 +126,21 @@ class DQN:
 					if done:
 						break
 
-					batch = random.sample(D,32)
-
-					b_states,b_actions,b_rewards,b_next_states,b_done= map(np.array,zip(*batch))
-
-					targets = b_rewards + discount  * np.invert(b_done).astype(np.float32) * np.amax(self.Q_.predict(sess,b_next_states),axis=1)
-
-					self.Q.sgd_step(sess,b_states,b_actions,targets)
-
-					
+					self._sgd_step(sess,discount)
+						
 					state = next_state
 
-		
+	
+	def _sgd_step(self,sess,discount):
+
+		batch = random.sample(self.D,32)
+
+		b_states,b_actions,b_rewards,b_next_states,b_done= map(np.array,zip(*batch))
+
+		targets = b_rewards + discount  * np.invert(b_done).astype(np.float32) * np.amax(self.Q_.predict(sess,b_next_states),axis=1)
+
+		self.Q.sgd_step(sess,b_states,b_actions,targets)
+
 	def _policy(self,sess,state,epsilon=0.1):
 
 		# Epsilon Greedy Policy
