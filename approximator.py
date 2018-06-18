@@ -24,7 +24,7 @@ class QApproximator:
 			conv2 = tf.layers.conv2d(inputs=conv1,filters=64,kernel_size=4,strides=2,activation=tf.nn.relu,kernel_initializer=tf.contrib.layers.xavier_initializer())
 			conv3 = tf.layers.conv2d(inputs=conv2,filters=64,kernel_size=3,strides=1,activation=tf.nn.relu,kernel_initializer=tf.contrib.layers.xavier_initializer())
 			flattened = tf.contrib.layers.flatten(conv3)
-			dense3 = tf.layers.dense(inputs=flattened,units=512,kernel_initializer=tf.contrib.layers.xavier_initializer())
+			dense3 = tf.layers.dense(inputs=flattened,units=512,activation=tf.nn.relu,kernel_initializer=tf.contrib.layers.xavier_initializer())
 			self.dense4 = tf.layers.dense(inputs=dense3,units=self.nA,kernel_initializer=tf.contrib.layers.xavier_initializer())
 			# This will be 32 x 4 we need to make it 32 x 1 but with the correct value
 

@@ -8,10 +8,11 @@ import numpy as np
 import random
 from gym.wrappers import Monitor
 import os
+from replay_mem import Memory
 
 class DQN:
 
-	def __init__(self,env_name="BreakoutDeterministic-v4"):
+	def __init__(self,env_name="BreakoutDeterministic-v0"):
 		self.env = gym.make(env_name)
 		self.nA = self.env.action_space.n
 		
@@ -28,7 +29,7 @@ class DQN:
 			
 		self.copier = WeightCopier(self.Q,self.Q_)
 
-		self.D = []
+		self.D = Memory()
 
 	def train(self,num_episodes=500000,discount=0.99,restore=True):
 
@@ -58,38 +59,37 @@ class DQN:
 			# Initialize replay memory
 			state = self.env.reset()
 			state = processor.process(sess,state)
-			state = [state] * 4
-			state = np.stack(state,axis=2)
+			temp_state = [state] * 4
+			temp_state = np.stack(temp_state,axis=2)
 
 			for _ in range(50000):
-				action = np.random.choice(self.nA,p=self._policy(sess,state,epsilon=self.epsilons[min(len(self.epsilons)-1,self.counter)]))
+				action = np.random.choice(self.nA,p=self._policy(sess,temp_state,epsilon=self.epsilons[min(len(self.epsilons)-1,self.counter)]))
 				next_state,reward,done,_ = self.env.step(action)
 				reward = np.clip(reward, 0, 1)
 				next_state = processor.process(sess,next_state)
-				next_state = np.append(state[:,:,1:],next_state[...,None],axis=2)
-				transition_tuple = (state,action,reward,next_state,done)
-				self.D.append(transition_tuple)
+				temp_next_state = np.append(temp_state[:,:,1:],next_state[...,None],axis=2)
+				self.D.add(state,action,reward,done,next_state)
 				state = next_state
+				temp_state = temp_next_state
 
 			episode_reward = 0
 			avg_reward = 0
 			beta = 0.01
 			e=1.0
 			
-			#self.env = Monitor(self.env,directory=monitor_path, video_callable=lambda count: count % 500 == 0, resume=True)
+			self.env = Monitor(self.env,directory=monitor_path, video_callable=lambda count: count % 250 == 0, resume=True)
 
 			while True:
 			
 				state = self.env.reset()
 				state = processor.process(sess,state)
-				
-				state = [state] * 4
-				state = np.stack(state,axis=2)
+				temp_state = [state] * 4
+				temp_state = np.stack(temp_state,axis=2)
 
 				reward_summary = tf.Summary(value=[tf.Summary.Value(tag='Reward',simple_value=episode_reward)])
 				filewriter.add_summary(reward_summary,self.counter)
 
-				print("Iteration: " + str(self.counter) + " Episode: " + str(self.episode) + " Epsilon: " + str(e) + " Episode Reward: " + str(episode_reward) + " Replay Size: " + str(len(self.D)), end="\r", flush=True)
+				print("Iteration: " + str(self.counter) + " Episode: " + str(self.episode) + " Epsilon: " + str(e) + " Episode Reward: " + str(episode_reward) + " Replay Size: " + str(self.D.replay_length()), end="\r", flush=True)
 
 				episode_reward = 0
 				self.episode += 1
@@ -100,20 +100,16 @@ class DQN:
 					e = self.epsilons[min(len(self.epsilons)-1,self.counter)]
 
 
-					action = np.random.choice(self.nA,p=self._policy(sess,state,e))
+					action = np.random.choice(self.nA,p=self._policy(sess,temp_state,e))
 					next_state,reward,done,_ = self.env.step(action)
 					reward = np.clip(reward, 0, 1)
 					next_state = processor.process(sess,next_state)
-					next_state = np.append(state[:,:,1:],next_state[...,None],axis=2)
+					temp_next_state = np.append(temp_state[:,:,1:],next_state[...,None],axis=2)
 
-					transition_tuple = (state,action,reward,next_state,done)
-
-					self.D.append(transition_tuple)
+					self.D.add(state,action,reward,done,next_state)
 
 					episode_reward += reward
 
-					if len(self.D) > self.max_replay:
-						del self.D[0]
 					if self.counter%10000 == 0:
 						self.copier.copy(sess)
 						# Save model
@@ -129,13 +125,12 @@ class DQN:
 					self._sgd_step(sess,discount)
 						
 					state = next_state
+					temp_state = temp_next_state
 
 	
 	def _sgd_step(self,sess,discount):
 
-		batch = random.sample(self.D,32)
-
-		b_states,b_actions,b_rewards,b_next_states,b_done= map(np.array,zip(*batch))
+		b_states, b_actions, b_rewards, b_next_states, b_done = self.D.sample()
 
 		targets = b_rewards + discount  * np.invert(b_done).astype(np.float32) * np.amax(self.Q_.predict(sess,b_next_states),axis=1)
 
