@@ -20,10 +20,10 @@ class Memory:
 		self.states = np.empty((self.replay_size,84,84),dtype=np.uint8)
 		self.rewards = np.empty((self.replay_size),dtype=np.uint8)
 		self.terminal = np.empty((self.replay_size),dtype=np.bool)
-		self.actions = np.empty((self.replay_size),dtype=np.int8)
+		self.actions = np.empty((self.replay_size),dtype=np.uint8)
 
-		self.state_buffer = np.empty((self.batch_size,84,84,4))
-		self.next_state_buffer = np.empty((self.batch_size,84,84,4))
+		self.state_buffer = np.empty((self.batch_size,84,84,4),dtype=np.uint8)
+		self.next_state_buffer = np.empty((self.batch_size,84,84,4),dtype=np.uint8)
 		
 		self.current = 0
 		self.filled = False

@@ -13,6 +13,7 @@ class Preprocessor:
 				self.output = tf.image.crop_to_bounding_box(grayscale, 34, 0, 160, 160)
 				self.output = tf.image.resize_images(self.output, [84, 84], method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
 				self.output = tf.squeeze(self.output)
+				self.output = tf.cast(self.output,tf.uint8)
 
 		build_graph()
 
