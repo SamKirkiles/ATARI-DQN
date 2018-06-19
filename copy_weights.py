@@ -12,7 +12,7 @@ class WeightCopier:
 		for v1,v2 in zip(sorted(params_q, key=lambda v: v.name),sorted(params_target, key=lambda v: v.name)):
 			updates.append(v2.assign(v1))
 
-        self.update_target = tf.group(*update)
+		self.update_target = tf.group(*updates)
 
 	def copy(self,sess):
 		sess.run(self.update_target)

@@ -1,7 +1,7 @@
 from DQN import DQN
 
 def main():
-	breakout = DQN()
+	breakout = DQN()	
 	breakout.train(
 		discount=0.99,
 		replay_memory_init_size=50000,

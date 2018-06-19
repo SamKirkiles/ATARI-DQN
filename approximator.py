@@ -12,7 +12,7 @@ class QApproximator:
 
 			# Takes in arbitrary number of states
 			self.states = tf.placeholder(tf.uint8,shape=(None,84,84,4),name="states")
-			self.targets = tf.placeholder(tf.uint8, shape=(None),name="targets")
+			self.targets = tf.placeholder(tf.float32, shape=(None),name="targets")
 			self.actions = tf.placeholder(tf.int32, shape=(None),name="actions")
 
 
@@ -27,12 +27,12 @@ class QApproximator:
 			dense3 = tf.layers.dense(inputs=flattened,units=512,activation=tf.nn.relu,kernel_initializer=tf.contrib.layers.xavier_initializer())
 			self.dense4 = tf.layers.dense(inputs=dense3,units=self.nA,kernel_initializer=tf.contrib.layers.xavier_initializer())
 
-			selected_actions = tf.sum(self.dense4 * tf.one_hot(self.actions,self.nA),axis=1)
+			selected_actions = tf.reduce_sum(self.dense4 * tf.one_hot(self.actions,self.nA),axis=1)
 
 			td_error = selected_actions - self.targets
 			loss = tf.reduce_mean(tf.square(td_error))
 
-			self.step,grads = graves_rmsprop_optimizer(los,0.00025,0.95, 0.01, 1)
+			self.step,grads = graves_rmsprop_optimizer(loss,0.00025,0.95, 0.01, 1)
 
 	def sgd_step(self,sess,states,actions,targets):
 		sess.run(self.step,feed_dict={self.states:states,self.actions:actions,self.targets:targets})

@@ -1,7 +1,7 @@
 import gym
 import matplotlib.pyplot as plt
 import tensorflow as tf
-from preself.processor import Preprocessor
+from preprocessor import Preprocessor
 from approximator import QApproximator
 from copy_weights import WeightCopier
 import numpy as np
@@ -61,7 +61,7 @@ class DQN:
 			temp_state = np.stack(temp_state,axis=2)
 
 			for _ in range(replay_memory_init_size):
-				action = np.random.choice(self.nA,p=self._policy(sess,temp_state,epsilon=self.epsilons[min(len(self.epsilons)-1,self._counter)]))
+				action = np.random.choice(self.nA,p=self._policy(sess,temp_state,epsilon=_epsilons[min(len(_epsilons)-1,self._counter)]))
 				next_state,reward,done,_ = self.env.step(action)
 				reward = np.clip(reward, 0, 1)
 				next_state = self.processor.process(sess,next_state)
@@ -95,7 +95,7 @@ class DQN:
 				while True:
 
 					self._counter += 1
-					e = self.epsilons[min(len(self.epsilons)-1,self._counter)]
+					e = _epsilons[min(len(_epsilons)-1,self._counter)]
 
 
 					action = np.random.choice(self.nA,p=self._policy(sess,temp_state,e))
