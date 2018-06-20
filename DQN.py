@@ -125,6 +125,11 @@ class DQN:
 					state = next_state
 					temp_state = temp_next_state
 
+
+	def demo(self):
+		with tf.Session(config=config) as sess:
+
+
 	
 	def _sgd_step(self,sess,discount):
 
