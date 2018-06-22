@@ -20,22 +20,31 @@ class QApproximator:
 
 			normalized = tf.divide(cast,255.0)
 
-			conv1 = tf.layers.conv2d(inputs=normalized,filters=32,kernel_size=8,strides=4,activation=tf.nn.relu,kernel_initializer=tf.contrib.layers.xavier_initializer())
-			conv2 = tf.layers.conv2d(inputs=conv1,filters=64,kernel_size=4,strides=2,activation=tf.nn.relu,kernel_initializer=tf.contrib.layers.xavier_initializer())
-			conv3 = tf.layers.conv2d(inputs=conv2,filters=64,kernel_size=3,strides=1,activation=tf.nn.relu,kernel_initializer=tf.contrib.layers.xavier_initializer())
+			# Three convolutional layers
+			conv1 = tf.contrib.layers.conv2d(normalized, 32, 8, 4, activation_fn=tf.nn.relu)
+			conv2 = tf.contrib.layers.conv2d(conv1, 64, 4, 2, activation_fn=tf.nn.relu)
+			conv3 = tf.contrib.layers.conv2d(conv2, 64, 3, 1, activation_fn=tf.nn.relu)
+
+			# Fully connected layers
 			flattened = tf.contrib.layers.flatten(conv3)
-			dense3 = tf.layers.dense(inputs=flattened,units=512,activation=tf.nn.relu,kernel_initializer=tf.contrib.layers.xavier_initializer())
-			self.dense4 = tf.layers.dense(inputs=dense3,units=self.nA,kernel_initializer=tf.contrib.layers.xavier_initializer())
+			fc1 = tf.contrib.layers.fully_connected(flattened, 512)
+			self.dense4 = tf.contrib.layers.fully_connected(fc1, 4,activation_fn=None)
 
 			selected_actions = tf.reduce_sum(self.dense4 * tf.one_hot(self.actions,self.nA),axis=1)
 
-			td_error = selected_actions - self.targets
-			loss = tf.reduce_mean(tf.square(td_error))
+			td_error =  tf.losses.huber_loss(self.targets,selected_actions,weights=1.0,delta=2.0)
 
-			self.step,grads = graves_rmsprop_optimizer(loss,0.00025,0.95, 0.01, 1)
+			self.loss = tf.reduce_mean(td_error)
+
+			self.step,grads = graves_rmsprop_optimizer(self.loss,0.00025,0.95, 0.01, 1)
+
+			self.loss_summary = tf.summary.scalar("loss",self.loss)
 
 	def sgd_step(self,sess,states,actions,targets):
-		sess.run(self.step,feed_dict={self.states:states,self.actions:actions,self.targets:targets})
+		_,loss,loss_summary = sess.run([self.step,self.loss,self.loss_summary],feed_dict={self.states:states,self.actions:actions,self.targets:targets})
+		return loss,loss_summary
 
 	def predict(self,sess,states):
 		return sess.run(self.dense4,feed_dict={self.states:states})
+
+	
