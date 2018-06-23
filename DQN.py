@@ -155,7 +155,8 @@ class DQN:
 
 		A = np.zeros(self.nA)
 		A += (epsilon/self.nA)
-		best_action = np.argmax(self.Q.predict(sess,state[None,...]))
+		q_values = self.Q.predict(sess,state[None,...])[0]
+		best_action = np.argmax(q_values)
 		A[best_action] += 1-epsilon
 		return A
 

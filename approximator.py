@@ -31,12 +31,20 @@ class QApproximator:
 			self.dense4 = tf.contrib.layers.fully_connected(fc1, 4,activation_fn=None)
 
 			selected_actions = tf.reduce_sum(self.dense4 * tf.one_hot(self.actions,self.nA),axis=1)
+			
+			self.losses = tf.squared_difference(self.targets, selected_actions)
+			self.loss = tf.reduce_mean(self.losses)
 
-			td_error =  tf.losses.huber_loss(self.targets,selected_actions,weights=1.0,delta=2.0)
+			# Optimizer Parameters from original paper
+			self.optimizer = tf.train.RMSPropOptimizer(0.00025, 0.99, 0.0, 1e-6)
+			self.step = self.optimizer.minimize(self.loss, global_step=tf.contrib.framework.get_global_step())
 
-			self.loss = tf.reduce_mean(td_error)
 
-			self.step,grads = graves_rmsprop_optimizer(self.loss,0.00025,0.95, 0.01, 1)
+			#td_error =  tf.losses.huber_loss(self.targets,selected_actions,weights=1.0,delta=2.0)
+
+			#self.loss = tf.reduce_mean(td_error)
+
+			#self.step,grads = graves_rmsprop_optimizer(self.loss,0.00025,0.95, 0.01, 1)
 
 			self.loss_summary = tf.summary.scalar("loss",self.loss)
 
