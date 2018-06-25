@@ -2,8 +2,6 @@ from DQN import DQN
 
 def main():
 
-	momentum = [0.9]
-
 	breakout = DQN(env_name="Breakout-v0",run_id="maxqhuber1",momentum=0.95)	
 
 	breakout.train(

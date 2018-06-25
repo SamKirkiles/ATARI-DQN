@@ -79,7 +79,7 @@ class DQN:
 			beta = 0.01
 			e=1.0
 			ep_loss = 0
-			avg_counter = 0
+			avg_counter = 1
 			ep_max_q = 0
 
 			self.env = Monitor(self.env,directory=monitor_path, video_callable=lambda count: count % monitor_record_steps == 0, resume=True)
@@ -91,18 +91,18 @@ class DQN:
 				temp_state = [state] * 4
 				temp_state = np.stack(temp_state,axis=2)
 
-				print("Run: " + str(self.run_id) + " Iteration: " + str(self._counter) + " Episode: " + str(episode) + "/" + str(num_episodes) + " Epsilon: " + str(e) + " Episode Reward: " + str(episode_reward) + " Replay Size: " + str(self.D.replay_length()) + " Loss: " + str(loss), end="\r", flush=True)
+				print("Run: " + str(self.run_id) + " Iteration: " + str(self._counter) + " Episode: " + str(episode) + "/" + str(num_episodes) + " Epsilon: " + str(e) + " Episode Reward: " + str(episode_reward) + " Replay Size: " + str(self.D.replay_length()) + " Loss: " + str(ep_loss/avg_counter), end="\r", flush=True)
 
 				reward_summary = tf.Summary(value=[tf.Summary.Value(tag='Reward',simple_value=episode_reward)])
-				filewriter.add_summary(reward_summary,self.episode)
+				filewriter.add_summary(reward_summary,episode)
 				reward_summary = tf.Summary(value=[tf.Summary.Value(tag='AVG_Q/Episode',simple_value=ep_max_q/avg_counter)])
-				filewriter.add_summary(reward_summary,self.episode)
+				filewriter.add_summary(reward_summary,episode)
 				reward_summary = tf.Summary(value=[tf.Summary.Value(tag='AVG_Loss/Episode',simple_value=ep_loss/avg_counter)])
-				filewriter.add_summary(reward_summary,self.episode)
+				filewriter.add_summary(reward_summary,episode)
 
 				episode_reward = 0
 				save_path = saver.save(sess, "./saves/model.ckpt")
-				avg_counter = 0
+				avg_counter = 1
 				ep_max_q = 0
 				ep_loss = 0
 
@@ -110,7 +110,8 @@ class DQN:
 
 					e = self._get_epsilon(epsilon_start=epsilon_start,epsilon_end=epsilon_end,epsilon_decay_steps=epsilon_decay_steps,i=self._counter)
 
-					action,max_q = np.random.choice(self.nA,p=self._policy(sess,temp_state,e))
+					probs,max_q = self._policy(sess,temp_state,e)
+					action = np.random.choice(self.nA,p=probs)
 					next_state,reward,done,_ = self.env.step(action)
 					reward = np.sign(reward)
 					next_state = self.processor.process(sess,next_state) 
@@ -130,7 +131,6 @@ class DQN:
 						self.copier.copy(sess)
 					if done:
 						break
-
 
 					state = next_state
 					temp_state = temp_next_state
@@ -153,7 +153,6 @@ class DQN:
 	def _policy(self,sess,state,epsilon=0.1):
 
 		# Epsilon Greedy Policy
-
 		A = np.zeros(self.nA)
 		A += (epsilon/self.nA)
 		q_values = self.Q.predict(sess,state[None,...])[0]

@@ -40,8 +40,6 @@ class QApproximator:
 
 			self.step = self.optimizer.minimize(self.loss, global_step=tf.contrib.framework.get_global_step())
 
-			self.loss_summary = tf.summary.scalar("loss",self.loss)
-
 	def sgd_step(self,sess,states,actions,targets):
 		_,loss = sess.run([self.step,self.loss],feed_dict={self.states:states,self.actions:actions,self.targets:targets})
 		return loss
