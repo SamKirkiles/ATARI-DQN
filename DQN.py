@@ -12,41 +12,40 @@ from replay_mem import Memory
 
 class DQN:
 
-	def __init__(self,env_name="Breakout-v0"):
+	def __init__(self,env_name="Breakout-v0",run_id=None,momentum=None):
 
 		self.env = gym.make(env_name)
 		self.nA = self.env.action_space.n
 		
-		self.Q =  QApproximator(self.nA,"Q")
-		self.Q_target =  QApproximator(self.nA,"Q_target")
+		self.Q =  QApproximator(self.nA,"Q",momentum)
+		self.Q_target =  QApproximator(self.nA,"Q_target",momentum)
 		self.copier = WeightCopier(self.Q,self.Q_target)
 		self.processor = Preprocessor()
 
-		self.runid = np.random.randint(10000)
-		
-		self.actions = np.zeros(4)
+		if run_id is None:
+			self.run_id = np.random.randint(10000)
+		else:
+			self.run_id = run_id		
 
-	def train(self,discount=0.99,replay_memory_init_size=50000,epsilon_start=1.0,epsilon_end=0.1,epsilon_decay_steps=500000,monitor_record_steps=250,max_replay=1000000,restore=True):
 
-		self._counter = 0
-		self._episode = 0
+	def train(self,discount=0.99,replay_memory_init_size=50000,epsilon_start=1.0,epsilon_end=0.1,epsilon_decay_steps=500000,monitor_record_steps=250,max_replay=1000000,num_episodes=10000,restore=True,start_counter=0):
+
+		self._counter = start_counter
+	
 		self.D = Memory(replay_size=max_replay)
 
-
-		saver = tf.train.Saver(max_to_keep=5,keep_checkpoint_every_n_hours=1)
+		saver = tf.train.Saver()
 
 		config = tf.ConfigProto(allow_soft_placement=True,log_device_placement=False)
 		config.gpu_options.allow_growth = True
 
 		with tf.Session(config=config) as sess:
 			
-			filewriter = tf.summary.FileWriter(logdir="logs/" + str(self.runid), graph=sess.graph)
-
+			filewriter = tf.summary.FileWriter(logdir="logs/" + str(self.run_id), graph=sess.graph)
 
 			monitor_path = "./monitor"
 			if not os.path.exists(monitor_path):
 				os.makedirs(monitor_path)
-
 
 			if restore:
 				saver.restore(sess, tf.train.latest_checkpoint('./saves'))
@@ -62,8 +61,8 @@ class DQN:
 
 			for _ in range(replay_memory_init_size):
 				action = np.random.choice(self.nA)
-				self.actions[action] += 1	
 				next_state,reward,done,_ = self.env.step(action)
+				reward = np.sign(reward)
 				next_state = self.processor.process(sess,next_state)
 				temp_next_state = np.append(temp_state[:,:,1:],next_state[...,None],axis=2)
 				self.D.add(state,action,reward,done,next_state)
@@ -77,59 +76,61 @@ class DQN:
 					temp_state = temp_next_state
 
 			episode_reward = 0
-			avg_reward = 0
 			beta = 0.01
 			e=1.0
-			loss = 0
+			ep_loss = 0
+			avg_counter = 0
+			ep_max_q = 0
 
 			self.env = Monitor(self.env,directory=monitor_path, video_callable=lambda count: count % monitor_record_steps == 0, resume=True)
 
-			while True:
+			for episode in range(num_episodes):
 			
 				state = self.env.reset()
 				state = self.processor.process(sess,state)
 				temp_state = [state] * 4
 				temp_state = np.stack(temp_state,axis=2)
 
-				reward_summary = tf.Summary(value=[tf.Summary.Value(tag='Reward',simple_value=episode_reward)])
-				filewriter.add_summary(reward_summary,self._counter)
+				print("Run: " + str(self.run_id) + " Iteration: " + str(self._counter) + " Episode: " + str(episode) + "/" + str(num_episodes) + " Epsilon: " + str(e) + " Episode Reward: " + str(episode_reward) + " Replay Size: " + str(self.D.replay_length()) + " Loss: " + str(loss), end="\r", flush=True)
 
-				print("Iteration: " + str(self._counter) + " Episode: " + str(self._episode) + " Epsilon: " + str(e) + " Episode Reward: " + str(episode_reward) + " Replay Size: " + str(self.D.replay_length()) + " Loss: " + str(loss) +  " Actions " + str(self.actions), end="\r", flush=True)
+				reward_summary = tf.Summary(value=[tf.Summary.Value(tag='Reward',simple_value=episode_reward)])
+				filewriter.add_summary(reward_summary,self.episode)
+				reward_summary = tf.Summary(value=[tf.Summary.Value(tag='AVG_Q/Episode',simple_value=ep_max_q/avg_counter)])
+				filewriter.add_summary(reward_summary,self.episode)
+				reward_summary = tf.Summary(value=[tf.Summary.Value(tag='AVG_Loss/Episode',simple_value=ep_loss/avg_counter)])
+				filewriter.add_summary(reward_summary,self.episode)
 
 				episode_reward = 0
-				self._episode += 1
-				
+				save_path = saver.save(sess, "./saves/model.ckpt")
+				avg_counter = 0
+				ep_max_q = 0
+				ep_loss = 0
+
 				while True:
 
-					self._counter += 1
 					e = self._get_epsilon(epsilon_start=epsilon_start,epsilon_end=epsilon_end,epsilon_decay_steps=epsilon_decay_steps,i=self._counter)
 
-
-					action = np.random.choice(self.nA,p=self._policy(sess,temp_state,e))
-					self.actions[action] += 1	
+					action,max_q = np.random.choice(self.nA,p=self._policy(sess,temp_state,e))
 					next_state,reward,done,_ = self.env.step(action)
+					reward = np.sign(reward)
 					next_state = self.processor.process(sess,next_state) 
 					temp_next_state = np.append(temp_state[:,:,1:],next_state[...,None],axis=2)
 
 					self.D.add(state,action,reward,done,next_state)
 
 					episode_reward += reward
+					ep_max_q += max_q
+					self._counter += 1
+					avg_counter += 1
+
+					loss = self._sgd_step(sess,discount)
+					ep_loss += loss
 
 					if self._counter%10000 == 0:
 						self.copier.copy(sess)
-						# Save model
-						print("Copying weights and saving model...")
-						save_path = saver.save(sess, "./saves/model.ckpt")
-
-					if self._counter % 20 == 0:
-						epsilon_summary = tf.Summary(value=[tf.Summary.Value(tag='Epsilon',simple_value=e)])
-						filewriter.add_summary(epsilon_summary,self._counter)
-
 					if done:
 						break
 
-					loss,loss_summary = self._sgd_step(sess,discount)
-					filewriter.add_summary(loss_summary,self._counter)
 
 					state = next_state
 					temp_state = temp_next_state
@@ -157,8 +158,9 @@ class DQN:
 		A += (epsilon/self.nA)
 		q_values = self.Q.predict(sess,state[None,...])[0]
 		best_action = np.argmax(q_values)
+		max_q = np.max(q_values)
 		A[best_action] += 1-epsilon
-		return A
+		return A,max_q
 
 
 
