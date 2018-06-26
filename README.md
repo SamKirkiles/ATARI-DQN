@@ -34,11 +34,6 @@ python3 main.py
 ```
 The program will create a folder called monitor in the directory and will output videos of each episode in .mp4 file types. You can also add ```env.render()``` in the main loop to see training in real time. 
 
-TODO:
-
-Add testing loop
-Finish Training
-
 Links:
 
 https://storage.googleapis.com/deepmind-media/dqn/DQNNaturePaper.pdf
