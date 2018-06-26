@@ -25,7 +25,34 @@ class DQN:
 		if run_id is None:
 			self.run_id = np.random.randint(10000)
 		else:
-			self.run_id = run_id		
+			self.run_id = run_id
+
+	def test(self,num_episodes=1000):
+
+		saver = tf.train.Saver()
+		config = tf.ConfigProto(allow_soft_placement=True,log_device_placement=False)
+		config.gpu_options.allow_growth = True
+
+		with tf.Session(config=config) as sess:
+
+			saver.restore(sess, tf.train.latest_checkpoint('./saves'))
+
+			for episode in range(num_episodes):
+			
+				state = self.env.reset()
+				state = self.processor.process(sess,state)
+				temp_state = [state] * 4
+				temp_state = np.stack(temp_state,axis=2)
+
+				while True:
+					self.env.render()
+					probs,max_q = self._policy(sess,temp_state,0.05)
+					action = np.random.choice(self.nA,p=probs)
+					next_state,reward,done,_ = self.env.step(action)
+					next_state = self.processor.process(sess,next_state) 
+					temp_state = np.append(temp_state[:,:,1:],next_state[...,None],axis=2)
+					if done:
+						break
 
 
 	def train(self,discount=0.99,replay_memory_init_size=50000,epsilon_start=1.0,epsilon_end=0.1,epsilon_decay_steps=500000,monitor_record_steps=250,max_replay=1000000,num_episodes=10000,restore=True,start_counter=0):

@@ -3,7 +3,7 @@ from DQN import DQN
 def main():
 
 	breakout = DQN(env_name="Breakout-v0",run_id=None,learning_rate=0.00025,momentum=0.95,epsilon=0.01)	
-
+	"""
 	breakout.train(
 		discount=0.99,
 		replay_memory_init_size=50000,
@@ -15,7 +15,8 @@ def main():
 		num_episodes=15000,
 		restore=True,
 		start_counter=0)
-
+	"""
+	breakout.test()
 	print("Done")
 
 
