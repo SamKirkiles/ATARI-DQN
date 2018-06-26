@@ -2,14 +2,15 @@
 #### Beating classic ATARI games with Deep Q Learning.
 
 ![](https://media.giphy.com/media/9VcPcvjfw9xc2o3sgt/giphy.gif)
+
+**Important** Due to reward scaling to region [-1,1] the reward graph shows the number of blocks destroyed every life. Score with the current weights is around 70 but will be much more with more training.
+
 ![](https://i.imgur.com/crYtWLq.png)
 
 Video demo: https://www.youtube.com/watch?v=iqdxMtFzw70
 
 Download the saves folder here: https://www.dropbox.com/sh/260ywdeeker4k3e/AABLTa2OPg0PYfV6i4vxnIVAa?dl=0
 To use the saves, place the folder inside the directory and rename it to "saves". Make sure to set restore to True in main.py.
-
-**Important** Due to reward scaling to region [-1,1] the reward graph shows the number of blocks destroyed every life. Score with the current weights is around 70 but will be much more with more training.
 
 Hyperparameters:
 Due to some inconsistencies with the original Nature paper, I had to play around a bit to find good hyperparameters. To replicate the results on your own implementation, pay attention to these sections:
