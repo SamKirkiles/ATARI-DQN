@@ -6,12 +6,6 @@ import random
 class Memory:
 
 	def __init__(self,replay_size=800000,batch_size=32):
-		"""
-		Holds data structures up to replay_size while keeping only 1/num_files in actual memory
-		Pickles remaining files in persisted storage
-		Access each file of batch size mem_size at random when switch_sample_memory is called
-		Sample takes random sample from current loaded_mem and returns it
-		"""
 
 		self.buffer = 4
 		self.batch_size=batch_size

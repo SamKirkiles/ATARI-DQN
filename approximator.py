@@ -3,7 +3,7 @@ from ops import graves_rmsprop_optimizer
 
 class QApproximator:
 
-	def __init__(self,actions,scope,momentum):
+	def __init__(self,actions,scope,learning_rate,momentum,epsilon):
 
 		with tf.device("/device:GPU:0"), tf.variable_scope(scope):
 
@@ -36,7 +36,7 @@ class QApproximator:
 			self.loss = tf.reduce_mean(self.losses)
 
 			# Optimizer Parameters from original paper
-			self.optimizer= tf.train.RMSPropOptimizer(0.00025,momentum=momentum,epsilon=0.01)
+			self.optimizer= tf.train.RMSPropOptimizer(learning_rate,momentum=momentum,epsilon=epsilon)
 
 			self.step = self.optimizer.minimize(self.loss, global_step=tf.contrib.framework.get_global_step())
 

@@ -12,13 +12,13 @@ from replay_mem import Memory
 
 class DQN:
 
-	def __init__(self,env_name="Breakout-v0",run_id=None,momentum=None):
+	def __init__(self,env_name="Breakout-v0",run_id=None,learning_rate=0.00025,momentum=None,epsilon=0.01):
 
 		self.env = gym.make(env_name)
 		self.nA = self.env.action_space.n
 		
-		self.Q =  QApproximator(self.nA,"Q",momentum)
-		self.Q_target =  QApproximator(self.nA,"Q_target",momentum)
+		self.Q =  QApproximator(self.nA,"Q",learning_rate,momentum,epsilon)
+		self.Q_target =  QApproximator(self.nA,"Q_target",learning_rate,momentum,epsilon)
 		self.copier = WeightCopier(self.Q,self.Q_target)
 		self.processor = Preprocessor()
 

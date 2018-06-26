@@ -2,7 +2,7 @@ from DQN import DQN
 
 def main():
 
-	breakout = DQN(env_name="Breakout-v0",run_id="maxqhuber1",momentum=0.95)	
+	breakout = DQN(env_name="Breakout-v0",run_id=None,learning_rate=0.00025,momentum=0.95,epsilon=0.01)	
 
 	breakout.train(
 		discount=0.99,
@@ -13,7 +13,7 @@ def main():
 		monitor_record_steps=50,
 		max_replay=800000,
 		num_episodes=15000,
-		restore=False,
+		restore=True,
 		start_counter=0)
 
 	print("Done")
