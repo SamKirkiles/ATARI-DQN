@@ -34,9 +34,10 @@ class DQN:
 		config.gpu_options.allow_growth = True
 
 		with tf.Session(config=config) as sess:
-
-			saver.restore(sess, tf.train.latest_checkpoint('./saves'))
-
+			try:
+				saver.restore(sess, tf.train.latest_checkpoint('./saves'))
+			except:
+				raise FileNotFoundError("Saves were not valid or not loaded. Please download from dropbox link in repository and rename folder to saves.")
 			for episode in range(num_episodes):
 			
 				state = self.env.reset()
