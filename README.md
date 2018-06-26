@@ -25,6 +25,18 @@ self.optimizer= tf.train.RMSPropOptimizer(0.00025,momentum=0.95,epsilon=0.01)
 ```
 I used huber loss with a delta of 1.0 (an argument was made online to use a delta of 2.0 however rewards on breakout are never -1). My momentum was 0.95. and epsisilon was 0.01. Learning rate decay was the default at 0.9. Make sure to clip rewards or they will not work with huber loss. 
 
+To train run with correct settings in main.py:
+
+```
+python3 main.py
+```
+The program will create a folder called monitor in the directory and will output videos of each episode in .mp4 file types. You can also add ```env.render()``` in the main loop to see training in real time. 
+
+TODO:
+
+Add testing loop
+Finish Training
+
 Links:
 
 https://storage.googleapis.com/deepmind-media/dqn/DQNNaturePaper.pdf
