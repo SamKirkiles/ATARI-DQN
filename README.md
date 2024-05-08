@@ -1,7 +1,10 @@
 # ATARI-DQN
 #### Beating classic ATARI games with Deep Q Learning.
 
-![](https://i.imgur.com/EsS3j7H.png | width=100)
+<p align="center">
+
+<img src="https://i.imgur.com/EsS3j7H.png" width="250"  />
+</p>
 
 **Important** Due to reward scaling to region [-1,1] the reward graph shows the number of blocks destroyed every life. Score with the current weights is around 70 but will be much more with more training. Reward is per episode and has the same x scale as the other two graphs
 
