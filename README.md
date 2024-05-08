@@ -1,6 +1,8 @@
 # ATARI-DQN
 #### Beating classic ATARI games with Deep Q Learning.
 
+Video demo: https://www.youtube.com/watch?v=iqdxMtFzw70
+
 <p align="center">
 
 <img src="https://i.imgur.com/EsS3j7H.png" width="250"  />
@@ -10,7 +12,6 @@
 
 ![](https://i.imgur.com/crYtWLq.png)
 
-Video demo: https://www.youtube.com/watch?v=iqdxMtFzw70
 
 Download the saves folder here: https://www.dropbox.com/sh/260ywdeeker4k3e/AABLTa2OPg0PYfV6i4vxnIVAa?dl=0
 To use the saves, place the folder inside the directory and rename it to "saves". Make sure to set restore to True in main.py.
